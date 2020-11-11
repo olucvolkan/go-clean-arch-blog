@@ -24,6 +24,7 @@ func New() *Config {
 		DBUser:     getConfigFileValues("database.user", "root"),
 		DBName:     getConfigFileValues("database.name", ""),
 		DBPassword: getConfigFileValues("database.pass", ""),
+		DBPort: getConfigFileValues("database.port","3306"),
 	}
 }
 
@@ -37,6 +38,17 @@ func (c *Config) DBUrl() string {
 		c.DBHost,
 		c.DBPort,
 		c.DBName,
+	)
+}
+
+// DBUrlWithoutDBName returns connection string for DB connection omitting the db name
+func (c *Config) DBUrlWithoutDBName() string {
+	return fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/?charset=utf8&parseTime=True&loc=Local",
+		c.DBUser,
+		c.DBPassword,
+		c.DBHost,
+		c.DBPort,
 	)
 }
 

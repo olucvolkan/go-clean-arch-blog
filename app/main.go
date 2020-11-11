@@ -1,39 +1,59 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
-	"log"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/spf13/viper"
+	"github.com/labstack/echo"
 	"github.com/olucvolkan/go-clean-arch-blog/config"
+	"log"
 )
-
-
-func init() {
-	viper.SetConfigFile(`config.json`)
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	if viper.GetBool(`debug`) {
-		log.Println("Service RUN on DEBUG mode")
-	}
-}
 
 
 func main(){
 
-	config := config.New()
+	c := config.New()
 
-	ensureDBExists(config)
+	ensureDBExists(c)
 
-	fmt.Println(config.DBUrl())
-	gormDB, err := gorm.Open("mysql", config.DBUrl())
+
+	fmt.Println(c.DBUrl())
+	dbConn, err := sql.Open("mysql", c.DBUrl())
+
 	if err != nil {
-		fmt.Println(fmt.Errorf("Can't connect to database, err: %v", err))
+		log.Fatal(err)
+	}
+	err = dbConn.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer func() {
+		err := dbConn.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	e := echo.New()
+
+	log.Fatal(e.Start(c.HTTPort))
+}
+
+func ensureDBExists(config * config.Config) {
+	db, err := sql.Open("mysql", config.DBUrlWithoutDBName() )
+
+	if err != nil {
+		fmt.Println("can't connect database for creating table")
 		return
 	}
-	gormDB.Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(models.Todo{})
-	defer gormDB.Close()
+
+	defer db.Close()
+	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + config.DBName + ";")
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("Successfully created database or updated")
+
+	}
 }
