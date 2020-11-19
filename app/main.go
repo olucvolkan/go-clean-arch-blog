@@ -4,9 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/olucvolkan/go-clean-arch-blog/config"
+	"github.com/olucvolkan/go-clean-arch-blog/domain"
 	"log"
+	_postRepository "github.com/olucvolkan/go-clean-arch-blog/post/repository/mysql"
+	_postService "github.com/olucvolkan/go-clean-arch-blog/post/service"
+	_postHandler "github.com/olucvolkan/go-clean-arch-blog/post/handler"
 )
 
 
@@ -20,6 +25,15 @@ func main(){
 	fmt.Println(c.DBUrl())
 	dbConn, err := sql.Open("mysql", c.DBUrl())
 
+	gormDb, err := gorm.Open("mysql", c.DBUrl())
+
+	gormDb.AutoMigrate(&domain.Post{})
+
+	if err != nil {
+		fmt.Println(fmt.Errorf("Can't connect to database, err: %v", err))
+		return
+	}
+	
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,6 +51,12 @@ func main(){
 
 	e := echo.New()
 
+	postRepository :=_postRepository.NewMysqlPostRepository(gormDb)
+	p := _postService.NewPostService(postRepository)
+
+	_postHandler.NewPostHandler(e,p)
+	
+	
 	log.Fatal(e.Start(c.HTTPort))
 }
 
